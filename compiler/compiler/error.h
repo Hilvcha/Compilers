@@ -1,4 +1,5 @@
 #pragma once
+#pragma once
 #include"scanner.h"
 
 struct Zero_divide{};

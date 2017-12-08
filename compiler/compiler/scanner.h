@@ -34,7 +34,10 @@ struct Token
 		value = other.value;
 		FuncPtr = other.FuncPtr;
 	}
+	friend std::ostream &operator<<(std::ostream &out, const Token &t);
 };
+std::ostream& operator<<(std::ostream &out, const Token &t);
+
 //Token curr_tok { SEMICO, ";", 0.0, nullptr };
 
 
