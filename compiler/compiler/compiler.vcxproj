@@ -111,11 +111,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\scanner.cpp" />
-    <ClCompile Include="..\testmain.cpp" />
+    <ClCompile Include="scanner.cpp" />
+    <ClCompile Include="testlexer.cpp" />
+    <ClCompile Include="testparser.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\scanner.h" />
+    <ClInclude Include="error.h" />
+    <ClInclude Include="parser.h" />
+    <ClInclude Include="scanner.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

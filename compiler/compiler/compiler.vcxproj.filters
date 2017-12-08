@@ -15,16 +15,25 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\scanner.cpp">
+    <ClCompile Include="scanner.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\testmain.cpp">
+    <ClCompile Include="testlexer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="testparser.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\scanner.h">
-      <Filter>源文件</Filter>
+    <ClInclude Include="parser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="scanner.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="error.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
