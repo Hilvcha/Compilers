@@ -2,8 +2,8 @@
 
 int main() {
 	std::cout << "please input your file path:" << std::endl;
-	std::string filepath;
-	std::cin >> filepath;
+	std::string filepath="e:\\in.txt";
+	//std::cin >> filepath;
 	try	{
 		Parser(filepath);
 
@@ -15,5 +15,5 @@ int main() {
 		std::cout << "ID error:" << t.p << ' ' << t.name << std::endl<<"¶ÁÈ¡ĞĞÊı£º" << t.Line << std::endl;
 	}
 	system("pause");
-	return 0;
+ 	return 0;
 }

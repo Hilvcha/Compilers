@@ -26,41 +26,41 @@ void TokenMatch(Token_Type op) {
 	if (op != token.type) {
 		throw Syntax_error("未预期的终结符", LineNo, token);
 	}
-	switch (token.type)
-	{
-	case ORIGIN:std::cout << "ORIGIN ";
-		break;
-	case SCALE:	std::cout << "SCALE ";
-		break;
-	case ROT:	std::cout << "ROT ";
-		break;
-	case IS:	std::cout << "IS ";
-		break;
-	case TO:	std::cout << "TO ";
-		break;
-	case STEP:	std::cout << "STEP ";
-		break;
-	case DRAW:	std::cout << "DRAW ";
-		break;
-	case FOR:	std::cout << "FOR ";
-		break;
-	case FROM:	std::cout << "FROM ";
-		break;
-	case T:		std::cout << "T ";
-		break;
-	case SEMICO:std::cout << "; " << std::endl;
-		break;
-	case L_BRACKET:	std::cout << "( ";
-		break;
-	case R_BRACKET:	std::cout << ") ";
-		break;
-	case COMMA:		std::cout << ", ";
-		break;
-	case NONTOKEN:	std::cout << "end ";
-		break;
-	default:
-		break;
-	}
+	//switch (token.type)
+	//{
+	//case ORIGIN:std::cout << "ORIGIN ";
+	//	break;
+	//case SCALE:	std::cout << "SCALE ";
+	//	break;
+	//case ROT:	std::cout << "ROT ";
+	//	break;
+	//case IS:	std::cout << "IS ";
+	//	break;
+	//case TO:	std::cout << "TO ";
+	//	break;
+	//case STEP:	std::cout << "STEP ";
+	//	break;
+	//case DRAW:	std::cout << "DRAW ";
+	//	break;
+	//case FOR:	std::cout << "FOR ";
+	//	break;
+	//case FROM:	std::cout << "FROM ";
+	//	break;
+	//case T:		std::cout << "T ";
+	//	break;
+	//case SEMICO:std::cout << "; " << std::endl;
+	//	break;
+	//case L_BRACKET:	std::cout << "( ";
+	//	break;
+	//case R_BRACKET:	std::cout << ") ";
+	//	break;
+	//case COMMA:		std::cout << ", ";
+	//	break;
+	//case NONTOKEN:	std::cout << "end ";
+	//	break;
+	//default:
+	//	break;
+	//}
 	FetchToken();
 }
 
@@ -68,7 +68,7 @@ void Parser(std::string filepath) {
 	input.open(filepath);
 	FetchToken();
 	Program();
-	input.close;
+	input.close();
 }
 
 void Program() {
@@ -120,6 +120,7 @@ void RotStatement() {
 	TokenMatch(IS);
 	rotPtr=Expression();
 	std::cout << "out RotStatement" << std::endl;
+	DrawExprTree(rotPtr, 0);
 }
 
 void ScaleStatement() {
@@ -146,7 +147,7 @@ void ForStatement() {
 	TokenMatch(R_BRACKET);
 	std::cout << "out ForStatement" << std::endl;
 }
-double Parameter;
+double Parameter=233;
 ExprNode *MakeExprNode (Token_Type opcode, ...){
 	ExprNode *ExprPtr = new(ExprNode);
 	ExprPtr->OpCode = opcode;
@@ -207,9 +208,7 @@ ExprNode * Factor() {
 	else if (token.type == MINUS) {
 		TokenMatch(MINUS);
 		right = Factor();
-		left = new (ExprNode);
-		left->OpCode = CONST_ID;
-		left->Content.CaseConst = 0;
+		left = MakeExprNode(CONST_ID, 0);
 		right = MakeExprNode(MINUS, left, right);
 	}
 	else {
@@ -254,4 +253,64 @@ ExprNode * Atom() {
 		throw Syntax_error("错误的 atom!", LineNo, token);
 	}
 	return p;
+}
+inline 
+void DrawSpace(const unsigned int layer,const unsigned int space) {
+	for (size_t i = 0; i < layer; i++){
+		for (size_t j = 0; j < space; j++){
+			std::cout << ' ';
+		}
+	}
+}
+
+void DrawExprTree(const ExprNode* root,const unsigned int layer) {
+		DrawSpace(layer, 1);
+		switch (root->OpCode){
+			case PLUS:
+				std::cout << '+'<<std::endl;
+				DrawExprTree(root->Content.CaseOperator.Left, layer + 1);
+				DrawExprTree(root->Content.CaseOperator.Right, layer + 1);
+				break;
+			case MINUS://有可能是负号，需要判断左节点是不是0
+				std::cout << '-' << std::endl;
+				if (root->Content.CaseOperator.Left->OpCode == CONST_ID) {
+					if (std::abs(root->Content.CaseOperator.Left->Content.CaseConst) <= 1e-15) {
+						DrawExprTree(root->Content.CaseOperator.Right, layer + 1);
+						break;
+					}
+				}
+				DrawExprTree(root->Content.CaseOperator.Left, layer + 1);
+				DrawExprTree(root->Content.CaseOperator.Right, layer + 1);
+				break;
+			case MUL:
+				std::cout << '*' << std::endl;
+				DrawExprTree(root->Content.CaseOperator.Left, layer + 1);
+				DrawExprTree(root->Content.CaseOperator.Right, layer + 1);
+				break;
+			case DIV:
+				std::cout << '/' << std::endl;
+				DrawExprTree(root->Content.CaseOperator.Left, layer + 1);
+				DrawExprTree(root->Content.CaseOperator.Right, layer + 1);
+				break;
+			case FUNC:
+				for (auto a : TokenTab) {
+					if (a.FuncPtr == root->Content.CaseFunc.MathFuncPtr) {
+						std::cout << a.literal_value << std::endl;
+						DrawExprTree(root->Content.CaseFunc.Child, layer + 1);
+					}
+				}
+				break;
+			case CONST_ID:
+				std::cout << root->Content.CaseConst << std::endl;
+				break;
+			case T://T的值有问题
+				std::cout << root->Content.CaseParmPtr <<std::endl;
+				break;
+			case POWER:
+				std::cout << "**" << std::endl;
+				DrawExprTree(root->Content.CaseOperator.Left,layer+1);
+				DrawExprTree(root->Content.CaseOperator.Right,layer+1);
+			default:
+				break;
+		}
 }

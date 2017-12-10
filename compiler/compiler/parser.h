@@ -23,5 +23,6 @@ struct ExprNode{
 	} Content;
 };
 
-
 //struct ExprNode
+//draw ExprNode
+void DrawExprTree(const ExprNode*, const unsigned int);

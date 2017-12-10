@@ -7,7 +7,8 @@ void skip_to_line_end(std::istream &input) {
 		input.get(ch);
 	} while (ch != '\n' && !input.fail());
 }
-Token token;
+
+Token token {ERRTOKEN,"",0.0,nullptr };
 
 
 unsigned int LineNo=1;
@@ -64,7 +65,7 @@ Token GetToken(std::istream &input) {
 			return GetToken(input);
 		}
 		input.unget();
-		tmp.type = MUL;
+		tmp.type = DIV;
 		return tmp;
 	case '-':
 		input.get(ch);
@@ -73,7 +74,7 @@ Token GetToken(std::istream &input) {
 			return GetToken(input);
 		}
 		input.unget();
-		tmp.type = MUL;
+		tmp.type = MINUS;
 		return tmp;
 		//ÊıÖµ
 	case '0':	case '1':	case '2':	case '3':
