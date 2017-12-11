@@ -120,7 +120,6 @@ void RotStatement() {
 	TokenMatch(IS);
 	rotPtr=Expression();
 	std::cout << "out RotStatement" << std::endl;
-	DrawExprTree(rotPtr, 0);
 }
 
 void ScaleStatement() {
@@ -147,7 +146,8 @@ void ForStatement() {
 	TokenMatch(R_BRACKET);
 	std::cout << "out ForStatement" << std::endl;
 }
-double Parameter=233;
+double Parameter=0;
+
 ExprNode *MakeExprNode (Token_Type opcode, ...){
 	ExprNode *ExprPtr = new(ExprNode);
 	ExprPtr->OpCode = opcode;
@@ -185,6 +185,7 @@ ExprNode* Expression() {
 		right=Term();
 		left=MakeExprNode(t_tmp, left, right); //left传完值左节点值后就可存放根节点
 	}
+	DrawExprTree(left, 0);//为何执行两次？
 	return left;
 }
 ExprNode * Term() {
@@ -304,7 +305,7 @@ void DrawExprTree(const ExprNode* root,const unsigned int layer) {
 				std::cout << root->Content.CaseConst << std::endl;
 				break;
 			case T://T的值有问题
-				std::cout << root->Content.CaseParmPtr <<std::endl;
+				std::cout << *root->Content.CaseParmPtr <<std::endl;
 				break;
 			case POWER:
 				std::cout << "**" << std::endl;

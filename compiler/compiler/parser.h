@@ -4,6 +4,7 @@
 #include<fstream>
 #include"error.h"
 extern std::ifstream input;
+extern double Parameter;
 
 void Parser(std::string);
 
@@ -19,7 +20,7 @@ struct ExprNode{
 			FuncPtr MathFuncPtr;
 		} CaseFunc;
 		double CaseConst;
-		double * CaseParmPtr;
+		double *CaseParmPtr;
 	} Content;
 };
 
