@@ -3,7 +3,7 @@
 int main() {
 	std::cout << "please input your file path:" << std::endl;
 	std::string filepath="e:\\in.txt";
-	//std::cin >> filepath;
+	std::cin >> filepath;
 	try	{
 		Parser(filepath);
 

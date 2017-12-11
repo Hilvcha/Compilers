@@ -1,7 +1,20 @@
 #include"parser.h"
 #include<cstdarg>
+#include<vector>
 std::ifstream input;
 
+double Parameter = 0;//T
+double Origin_x = 0.0, Origin_y = 0.0;//平移
+double Rot_ang = 0.0;//旋转角度
+double Scale_x = 1, Scale_y = 1;//比例因子
+int ForCnt = 0;
+struct Point{
+	double x;
+	double y;
+	Point(double x1,double y1):x(x1),y(y1){}
+};
+
+//递归子程序
 void Program();
 void Statement();
 void OriginStatement();
@@ -15,7 +28,7 @@ ExprNode * Term();
 ExprNode * Factor();
 ExprNode * Component();
 ExprNode * Atom();
-
+//词法分析辅助函数
 inline
 void FetchToken() {
 	token = GetToken(input);
@@ -109,17 +122,27 @@ void OriginStatement() {
 	TokenMatch(IS);
 	TokenMatch(L_BRACKET);
 	xPtr=Expression();
+	DrawExprTree(xPtr, 0);
+
 	TokenMatch(COMMA);
 	yPtr=Expression();
+	DrawExprTree(yPtr, 0);
+
 	TokenMatch(R_BRACKET);
 	std::cout << "out OriStatement" << std::endl;
+	//draw
+	Origin_x = GetExprValue(xPtr);
+	Origin_y = GetExprValue(yPtr);
 }
 void RotStatement() {
 	std::cout << "RotStatement" << std::endl;
 	ExprNode *rotPtr;
 	TokenMatch(IS);
 	rotPtr=Expression();
+	DrawExprTree(rotPtr, 0);
 	std::cout << "out RotStatement" << std::endl;
+	//
+	Rot_ang = GetExprValue(rotPtr);
 }
 
 void ScaleStatement() {
@@ -128,10 +151,15 @@ void ScaleStatement() {
 	TokenMatch(IS);
 	TokenMatch(L_BRACKET);
 	xPtr=Expression();
+	DrawExprTree(xPtr, 0);
 	TokenMatch(COMMA);
 	yPtr=Expression();
+	DrawExprTree(yPtr, 0);
 	TokenMatch(R_BRACKET);
 	std::cout << "out ScaleStatement" << std::endl;
+	//
+	Scale_x = GetExprValue(xPtr);
+	Scale_y = GetExprValue(yPtr);
 }
 void ForStatement() {
 	std::cout << "ForStatement" << std::endl;
@@ -145,8 +173,8 @@ void ForStatement() {
 	TokenMatch(COMMA);		yPtr=Expression();
 	TokenMatch(R_BRACKET);
 	std::cout << "out ForStatement" << std::endl;
+	DrawLoop(GetExprValue(fromPtr), GetExprValue(toPtr), GetExprValue(stepPtr), xPtr, yPtr);
 }
-double Parameter=0;
 
 ExprNode *MakeExprNode (Token_Type opcode, ...){
 	ExprNode *ExprPtr = new(ExprNode);
@@ -185,7 +213,6 @@ ExprNode* Expression() {
 		right=Term();
 		left=MakeExprNode(t_tmp, left, right); //left传完值左节点值后就可存放根节点
 	}
-	DrawExprTree(left, 0);//为何执行两次？
 	return left;
 }
 ExprNode * Term() {
@@ -314,4 +341,52 @@ void DrawExprTree(const ExprNode* root,const unsigned int layer) {
 			default:
 				break;
 		}
+}
+
+double GetExprValue(ExprNode * root){
+	if (root == NULL) return 0.0;
+	switch (root->OpCode){
+	case PLUS:
+		return GetExprValue(root->Content.CaseOperator.Left) + GetExprValue(root->Content.CaseOperator.Right);
+	case MINUS:
+		return GetExprValue(root->Content.CaseOperator.Left) - GetExprValue(root->Content.CaseOperator.Right);
+	case MUL:
+		return GetExprValue(root->Content.CaseOperator.Left) * GetExprValue(root->Content.CaseOperator.Right);
+	case DIV:
+		return GetExprValue(root->Content.CaseOperator.Left) / GetExprValue(root->Content.CaseOperator.Right);
+	case FUNC:
+		return root->Content.CaseFunc.MathFuncPtr(GetExprValue(root->Content.CaseFunc.Child));
+	case CONST_ID:
+		return root->Content.CaseConst;
+	case T:
+		return *(root->Content.CaseParmPtr);
+	default:
+		return 0.0;
+	}
+}
+
+void CalcCoord(ExprNode *xp, ExprNode *yp, double &x_v, double &y_v){
+	double local_x, local_y, temp;
+	local_x = GetExprValue(xp);
+	local_y = GetExprValue(yp);
+	local_x *= Scale_x;
+	local_y *= Scale_y;
+	temp = local_x* cos(Rot_ang) + local_y* sin(Rot_ang);
+	local_y = local_y* cos(Rot_ang) - local_y* sin(Rot_ang);
+	local_x += Origin_x;
+	local_y += Origin_y;
+	x_v = local_x;
+	y_v = local_y;
+}
+
+void DrawDot(unsigned long x, unsigned long y){
+	std::cout << "x=" << x << "y=" << y <<std::endl;
+}
+
+void DrawLoop(double start, double to, double step, ExprNode * xp, ExprNode *yp){
+	double x, y;
+	for (Parameter = start; Parameter <= to; Parameter += step) {
+		CalcCoord(xp, yp, x, y);//算出循环的每一个x y的变幻后的值
+		DrawDot((unsigned long)x,(unsigned long)y);
+	}
 }
