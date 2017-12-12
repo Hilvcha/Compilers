@@ -1,15 +1,15 @@
 #include"parser.h"
 #include<cstdarg>
 #include<vector>
+#include"error.h"
 #include<windows.h>
 #define FOR_SIZE 100
 std::ifstream input;
 //绘图相关
-void DrawLoop(double start, double to, double step, ExprNode * xp, ExprNode * yp, HDC hdc);
+void DrawLoop(double start, double to, double step, ExprNode * xp, ExprNode * yp);
+void CalcCoord(ExprNode *xp, ExprNode *yp, double &x_v, double &y_v);
 void DrawDot(unsigned long, unsigned long);
 //void DrawLoop(double, double, double, ExprNode*, ExprNode*,HDC);
-
-
 double Parameter = 0;//T
 double Origin_x = 0.0, Origin_y = 0.0;//平移
 double Rot_ang = 0.0;//旋转角度
@@ -24,32 +24,32 @@ std::ostream& operator<<(std::ostream &out, const Point &t) {
 	out << t.x << ' ' << t.y << ' ' ;
 	return out;
 }
+std::vector<Point> *ForPtr[FOR_SIZE];//暂存每个for语句的生成坐标
 
-std::vector<Point> *ForPtr[FOR_SIZE];
-//递归子程序
-void Program(HDC);
-void Statement(HDC);
+//parser递归子程序
+void Program();
+void Statement();
 void OriginStatement();
 void RotStatement();
 void ScaleStatement();
-void ForStatement(HDC);
+void ForStatement();
 
-ExprNode * MakeExprNode(Token_Type opcode, ...);
+ExprNode * MakeExprNode(Scan::Token_Type opcode, ...);
 ExprNode * Expression();
 ExprNode * Term();
 ExprNode * Factor();
 ExprNode * Component();
 ExprNode * Atom();
+void DrawExprTree(const ExprNode* root, const unsigned int layer);
 //词法分析辅助函数
-inline
 void FetchToken() {
-	token = GetToken(input);
+	Scan::token = Scan::GetToken(input);
 }
 inline
-void TokenMatch(Token_Type op) {
+void TokenMatch(Scan::Token_Type op) {
 
-	if (op != token.type) {
-		throw Syntax_error("未预期的终结符", LineNo, token);
+	if (op != Scan::token.type) {
+		throw Error::Syntax_error("未预期的终结符", Scan::LineNo, Scan::token);
 	}
 	//switch (token.type)
 	//{
@@ -88,74 +88,62 @@ void TokenMatch(Token_Type op) {
 	//}
 	FetchToken();
 }
-
+//递归子程序实现
 void Parser(std::string filepath) {
 	input.open(filepath);
 	if (input.fail()) {
-		throw ID_error("未打开文件",0,"!");
+		throw Error::ID_error("未打开文件",0,"!");
 	}
 	FetchToken();
-
-	HWND   hwnd;
-	HDC    hdc;
-
-	//获取console的设备上下文句柄
-	hwnd = GetConsoleWindow();
-	hdc = GetDC(hwnd);
-
-	//调整一下console背景颜色，否则看不清线条
-	system("color FD");
-	MoveToEx(hdc, 0, 0, NULL);
-
-	Program(hdc);
+	Program();
 	input.close();
 }
 
-void Program(HDC hdc) {
+void Program() {
 	std::cout << "Program" << std::endl;
-	while (token.type != NONTOKEN) {
-		Statement(hdc);
-		TokenMatch(SEMICO);
+	while (Scan::token.type != Scan::NONTOKEN) {
+		Statement();
+		TokenMatch(Scan::SEMICO);
 	}
 	std::cout << "out Program" << std::endl;
 }
-void Statement(HDC hdc) {
+void Statement() {
 	std::cout << "Statement" << std::endl;
-	if (token.type == ORIGIN) {
+	if (Scan::token.type == Scan::ORIGIN) {
 		std::cout << "ORIGIN ";
 		FetchToken();
 		OriginStatement();
 	}
-	else if (token.type == SCALE) {
+	else if (Scan::token.type == Scan::SCALE) {
 		FetchToken();
 		ScaleStatement();
 	}
-	else if (token.type == ROT) {
+	else if (Scan::token.type == Scan::ROT) {
 		FetchToken();
 		RotStatement();
 	}
-	else if (token.type == FOR) {
+	else if (Scan::token.type == Scan::FOR) {
 		FetchToken();
-		ForStatement(hdc);
+		ForStatement();
 	}
 	else {
-		throw Syntax_error("未能识别的 Statement!", LineNo, token);
+		throw Error::Syntax_error("未能识别的 Statement!", Scan::LineNo, Scan::token);
 	}
 	std::cout << "out Statement" << std::endl;
 }
 void OriginStatement() {
 	std::cout << "OriStatement" << std::endl;
 	ExprNode *xPtr, *yPtr;
-	TokenMatch(IS);
-	TokenMatch(L_BRACKET);
+	TokenMatch(Scan::IS);
+	TokenMatch(Scan::L_BRACKET);
 	xPtr=Expression();
 	DrawExprTree(xPtr, 0);
 
-	TokenMatch(COMMA);
+	TokenMatch(Scan::COMMA);
 	yPtr=Expression();
 	DrawExprTree(yPtr, 0);
 
-	TokenMatch(R_BRACKET);
+	TokenMatch(Scan::R_BRACKET);
 	std::cout << "out OriStatement" << std::endl;
 	//draw
 	Origin_x = GetExprValue(xPtr);
@@ -164,7 +152,7 @@ void OriginStatement() {
 void RotStatement() {
 	std::cout << "RotStatement" << std::endl;
 	ExprNode *rotPtr;
-	TokenMatch(IS);
+	TokenMatch(Scan::IS);
 	rotPtr=Expression();
 	DrawExprTree(rotPtr, 0);
 	std::cout << "out RotStatement" << std::endl;
@@ -175,50 +163,51 @@ void RotStatement() {
 void ScaleStatement() {
 	std::cout << "ScaleStatement" << std::endl;
 	ExprNode *xPtr, *yPtr;
-	TokenMatch(IS);
-	TokenMatch(L_BRACKET);
+	TokenMatch(Scan::IS);
+	TokenMatch(Scan::L_BRACKET);
 	xPtr=Expression();
 	DrawExprTree(xPtr, 0);
-	TokenMatch(COMMA);
+	TokenMatch(Scan::COMMA);
 	yPtr=Expression();
 	DrawExprTree(yPtr, 0);
-	TokenMatch(R_BRACKET);
+	TokenMatch(Scan::R_BRACKET);
 	std::cout << "out ScaleStatement" << std::endl;
 	//
 	Scale_x = GetExprValue(xPtr);
 	Scale_y = GetExprValue(yPtr);
 }
-void ForStatement(HDC hdc) {
+void ForStatement() {
 	ForPtr[ForCnt] = new std::vector<Point>;
 	std::cout << "ForStatement" << std::endl;
 	ExprNode *fromPtr, *toPtr, *stepPtr, *xPtr, *yPtr;
-	TokenMatch(T);
-	TokenMatch(FROM);	fromPtr = Expression();
-	TokenMatch(TO);		toPtr = Expression();
-	TokenMatch(STEP);		stepPtr=Expression();
-	TokenMatch(DRAW);
-	TokenMatch(L_BRACKET);	xPtr=Expression();
-	TokenMatch(COMMA);		yPtr=Expression();
-	TokenMatch(R_BRACKET);
+	TokenMatch(Scan::T);
+	TokenMatch(Scan::FROM);	fromPtr = Expression();
+	TokenMatch(Scan::TO);		toPtr = Expression();
+	TokenMatch(Scan::STEP);		stepPtr=Expression();
+	TokenMatch(Scan::DRAW);
+	TokenMatch(Scan::L_BRACKET);	xPtr=Expression();
+	TokenMatch(Scan::COMMA);		yPtr=Expression();
+	TokenMatch(Scan::R_BRACKET);
 	std::cout << "out ForStatement" << std::endl;
-	DrawLoop(GetExprValue(fromPtr), GetExprValue(toPtr), GetExprValue(stepPtr), xPtr, yPtr,hdc);
+	DrawLoop(GetExprValue(fromPtr), GetExprValue(toPtr), GetExprValue(stepPtr), xPtr, yPtr);
 	ForCnt++;
 }
 
-ExprNode *MakeExprNode (Token_Type opcode, ...){
+//语法树实现
+ExprNode *MakeExprNode (Scan::Token_Type opcode, ...){
 	ExprNode *ExprPtr = new(ExprNode);
 	ExprPtr->OpCode = opcode;
 	va_list ArgPtr;
 	va_start(ArgPtr, opcode);
 	switch (opcode)
 	{
-	case CONST_ID:
+	case Scan::CONST_ID:
 		ExprPtr->Content.CaseConst = (double)va_arg(ArgPtr, double);
 		break;
-	case T:
+	case Scan::T:
 		ExprPtr->Content.CaseParmPtr = &Parameter;
 		break;
-	case FUNC:
+	case Scan::FUNC:
 		ExprPtr->Content.CaseFunc.MathFuncPtr = (FuncPtr)va_arg(ArgPtr, FuncPtr);
 		ExprPtr->Content.CaseFunc.Child = (ExprNode*)va_arg(ArgPtr, ExprNode*);
 		break;
@@ -234,10 +223,10 @@ ExprNode *MakeExprNode (Token_Type opcode, ...){
 
 ExprNode* Expression() {
 	ExprNode *left,*right;
-	Token_Type t_tmp;
+	Scan::Token_Type t_tmp;
 	left=Term();
-	while (token.type == PLUS || token.type == MINUS) {
-		t_tmp = token.type;
+	while (Scan::token.type == Scan::PLUS || Scan::token.type == Scan::MINUS) {
+		t_tmp = Scan::token.type;
 		FetchToken();
 		right=Term();
 		left=MakeExprNode(t_tmp, left, right); //left传完值左节点值后就可存放根节点
@@ -246,10 +235,10 @@ ExprNode* Expression() {
 }
 ExprNode * Term() {
 	ExprNode *left, *right;
-	Token_Type t_tmp;
+	Scan::Token_Type t_tmp;
 	left=Factor();
-	while (token.type == MUL || token.type == DIV) {
-		t_tmp = token.type;
+	while (Scan::token.type == Scan::MUL || Scan::token.type == Scan::DIV) {
+		t_tmp = Scan::token.type;
 		FetchToken();
 		right=Factor();
 		left = MakeExprNode(t_tmp, left, right);
@@ -258,15 +247,15 @@ ExprNode * Term() {
 }
 ExprNode * Factor() {
 	ExprNode *left, *right;
-	if (token.type == PLUS) {
-		TokenMatch(PLUS);
+	if (Scan::token.type == Scan::PLUS) {
+		TokenMatch(Scan::PLUS);
 		right = Factor();
 	}
-	else if (token.type == MINUS) {
-		TokenMatch(MINUS);
+	else if (Scan::token.type == Scan::MINUS) {
+		TokenMatch(Scan::MINUS);
 		right = Factor();
-		left = MakeExprNode(CONST_ID, 0);
-		right = MakeExprNode(MINUS, left, right);
+		left = MakeExprNode(Scan::CONST_ID, 0);
+		right = MakeExprNode(Scan::MINUS, left, right);
 	}
 	else {
 		right=Component();
@@ -276,38 +265,38 @@ ExprNode * Factor() {
 ExprNode * Component() {
 	ExprNode *left, *right;
 	left=Atom();
-	while (token.type == POWER) {
-		TokenMatch(POWER);
+	while (Scan::token.type == Scan::POWER) {
+		TokenMatch(Scan::POWER);
 		right=Component();
-		left = MakeExprNode(POWER, left, right);
+		left = MakeExprNode(Scan::POWER, left, right);
 	}
 	return left;
 }
 ExprNode * Atom() {
 	ExprNode *p;
-	if (token.type == CONST_ID) {
-		p=MakeExprNode(CONST_ID, token.value);
-		TokenMatch(CONST_ID);
+	if (Scan::token.type == Scan::CONST_ID) {
+		p=MakeExprNode(Scan::CONST_ID, Scan::token.value);
+		TokenMatch(Scan::CONST_ID);
 	}
-	else if (token.type == T) {
-		p = MakeExprNode(T);
-		TokenMatch(T);
+	else if (Scan::token.type == Scan::T) {
+		p = MakeExprNode(Scan::T);
+		TokenMatch(Scan::T);
 	}
-	else if (token.type == FUNC) {
-		Token tmp = token;
-		TokenMatch(FUNC);
-		TokenMatch(L_BRACKET);
+	else if (Scan::token.type == Scan::FUNC) {
+		Scan::Token tmp = Scan::token;
+		TokenMatch(Scan::FUNC);
+		TokenMatch(Scan::L_BRACKET);
 		p=Expression(); 
-		p = MakeExprNode(FUNC, tmp.FuncPtr, p);
-		TokenMatch(R_BRACKET);
+		p = MakeExprNode(Scan::FUNC, tmp.FuncPtr, p);
+		TokenMatch(Scan::R_BRACKET);
 	}
-	else if (token.type == L_BRACKET) {
+	else if (Scan::token.type == Scan::L_BRACKET) {
 		FetchToken();
 		p=Expression();
-		TokenMatch(R_BRACKET);
+		TokenMatch(Scan::R_BRACKET);
 	}
 	else {
-		throw Syntax_error("错误的 atom!", LineNo, token);
+		throw Error::Syntax_error("错误的 atom!", Scan::LineNo, Scan::token);
 	}
 	return p;
 }
@@ -323,14 +312,14 @@ void DrawSpace(const unsigned int layer,const unsigned int space) {
 void DrawExprTree(const ExprNode* root,const unsigned int layer) {
 		DrawSpace(layer, 1);
 		switch (root->OpCode){
-			case PLUS:
+			case Scan::PLUS:
 				std::cout << '+'<<std::endl;
 				DrawExprTree(root->Content.CaseOperator.Left, layer + 1);
 				DrawExprTree(root->Content.CaseOperator.Right, layer + 1);
 				break;
-			case MINUS://有可能是负号，需要判断左节点是不是0
+			case Scan::MINUS://有可能是负号，需要判断左节点是不是0
 				std::cout << '-' << std::endl;
-				if (root->Content.CaseOperator.Left->OpCode == CONST_ID) {
+				if (root->Content.CaseOperator.Left->OpCode == Scan::CONST_ID) {
 					if (std::abs(root->Content.CaseOperator.Left->Content.CaseConst) <= 1e-15) {
 						DrawExprTree(root->Content.CaseOperator.Right, layer + 1);
 						break;
@@ -339,31 +328,31 @@ void DrawExprTree(const ExprNode* root,const unsigned int layer) {
 				DrawExprTree(root->Content.CaseOperator.Left, layer + 1);
 				DrawExprTree(root->Content.CaseOperator.Right, layer + 1);
 				break;
-			case MUL:
+			case Scan::MUL:
 				std::cout << '*' << std::endl;
 				DrawExprTree(root->Content.CaseOperator.Left, layer + 1);
 				DrawExprTree(root->Content.CaseOperator.Right, layer + 1);
 				break;
-			case DIV:
+			case Scan::DIV:
 				std::cout << '/' << std::endl;
 				DrawExprTree(root->Content.CaseOperator.Left, layer + 1);
 				DrawExprTree(root->Content.CaseOperator.Right, layer + 1);
 				break;
-			case FUNC:
-				for (auto a : TokenTab) {
+			case Scan::FUNC:
+				for (auto a : Scan::TokenTab) {
 					if (a.FuncPtr == root->Content.CaseFunc.MathFuncPtr) {
 						std::cout << a.literal_value << std::endl;
 						DrawExprTree(root->Content.CaseFunc.Child, layer + 1);
 					}
 				}
 				break;
-			case CONST_ID:
+			case Scan::CONST_ID:
 				std::cout << root->Content.CaseConst << std::endl;
 				break;
-			case T://T的值有问题
+			case Scan::T://T的值有问题
 				std::cout << *root->Content.CaseParmPtr <<std::endl;
 				break;
-			case POWER:
+			case Scan::POWER:
 				std::cout << "**" << std::endl;
 				DrawExprTree(root->Content.CaseOperator.Left,layer+1);
 				DrawExprTree(root->Content.CaseOperator.Right,layer+1);
@@ -375,19 +364,19 @@ void DrawExprTree(const ExprNode* root,const unsigned int layer) {
 double GetExprValue(ExprNode * root){
 	if (root == NULL) return 0.0;
 	switch (root->OpCode){
-	case PLUS:
+	case Scan::PLUS:
 		return GetExprValue(root->Content.CaseOperator.Left) + GetExprValue(root->Content.CaseOperator.Right);
-	case MINUS:
+	case Scan::MINUS:
 		return GetExprValue(root->Content.CaseOperator.Left) - GetExprValue(root->Content.CaseOperator.Right);
-	case MUL:
+	case Scan::MUL:
 		return GetExprValue(root->Content.CaseOperator.Left) * GetExprValue(root->Content.CaseOperator.Right);
-	case DIV:
+	case Scan::DIV:
 		return GetExprValue(root->Content.CaseOperator.Left) / GetExprValue(root->Content.CaseOperator.Right);
-	case FUNC:
+	case Scan::FUNC:
 		return root->Content.CaseFunc.MathFuncPtr(GetExprValue(root->Content.CaseFunc.Child));
-	case CONST_ID:
+	case Scan::CONST_ID:
 		return root->Content.CaseConst;
-	case T:
+	case Scan::T:
 		return *(root->Content.CaseParmPtr);
 	default:
 		return 0.0;
@@ -412,7 +401,7 @@ void DrawDot(unsigned long x, unsigned long y){
 	ForPtr[ForCnt]->push_back(Point(x, y));
 }
 
-void DrawLoop(double start, double to, double step, ExprNode * xp, ExprNode *yp, HDC hdc){
+void DrawLoop(double start, double to, double step, ExprNode * xp, ExprNode *yp){
 
 	double x, y;
 	for (Parameter = start; Parameter <= to; Parameter += step) {
@@ -428,8 +417,7 @@ void DrawLoop(double start, double to, double step, ExprNode * xp, ExprNode *yp,
 void DrawHtml(std::string filepath) {
 
 	if (ForCnt == 0) {
-		std::cerr << "没有for语句进行绘制！\n";
-		return;
+		throw Error::Syntax_error("没有for语句进行绘制", Scan::LineNo, Scan::token);
 	}
 	std::ofstream HtmlOut(filepath);
 	Point temp(0, 0);

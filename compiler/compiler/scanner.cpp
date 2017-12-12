@@ -8,25 +8,25 @@ void skip_to_line_end(std::istream &input) {
 	} while (ch != '\n' && !input.fail());
 }
 
-Token token {ERRTOKEN,"",0.0,nullptr };
+Scan::Token Scan::token {Scan::ERRTOKEN,"",0.0,nullptr };
 
 
-unsigned int LineNo=1;
+unsigned int Scan::LineNo=1;
 
-std::ostream& operator<<(std::ostream &out, const Token &t) {
+std::ostream& Scan::operator<<(std::ostream &out, const Scan::Token &t) {
 	out << int(t.type) << ' ' << t.literal_value << ' ' << t.value << ' ' << t.FuncPtr;
 	return out;
 }
 
-Token GetToken(std::istream &input) {
-	Token tmp{ ERRTOKEN,"",0.0,nullptr };
+Scan::Token Scan::GetToken(std::istream &input) {
+	Scan::Token tmp{ Scan::ERRTOKEN,"",0.0,nullptr };
 	char ch;
 	std::string literal_value;
 	double num_value;
 	while (input.get(ch), !input.eof()) {//skip
 		if (input.fail()) {
 			literal_value.push_back(toupper(ch));
-			throw ID_error("文件存在非法字符，读取失败！", LineNo, literal_value.c_str());
+			throw Error::ID_error("文件存在非法字符，读取失败！", LineNo, literal_value.c_str());
 		}
 		switch (ch) {
 		case ' ':
@@ -38,29 +38,31 @@ Token GetToken(std::istream &input) {
 		input.unget(); break;
 	}
 	if (input.eof()) {
-		tmp.type = NONTOKEN;
+		tmp.type = Scan::NONTOKEN;
 		return tmp;
 	}
 	input.get(ch);
 	switch (ch) {
 		//单个的
 	case '+':
+		tmp.literal_value = "+"; tmp.type = Scan::Token_Type(ch); return tmp;//两个的符号
 	case '(':
+		tmp.literal_value = "("; tmp.type = Scan::Token_Type(ch); return tmp;//两个的符号
 	case ')':
+		tmp.literal_value = ")"; tmp.type = Scan::Token_Type(ch); return tmp;//两个的符号
 	case ',':
-		tmp.type = Token_Type(ch);
-		return tmp;//两个的符号
+		tmp.literal_value = ","; tmp.type = Scan::Token_Type(ch); return tmp;//两个的符号
 	case ';':
 		LineNo++;
-		tmp.type = SEMICO;
+		tmp.literal_value = ";"; tmp.type = Scan::SEMICO;
 		return tmp;
 	case '*':
 		if (input.get(ch), ch == '*') {
-			tmp.type = POWER;
+			tmp.type = Scan::POWER;
 			return tmp;
 		}
 		input.unget();
-		tmp.type = MUL;
+		tmp.literal_value = "*"; tmp.type = Scan::MUL;
 		return tmp;
 	case '/':
 		input.get(ch);
@@ -69,7 +71,7 @@ Token GetToken(std::istream &input) {
 			return GetToken(input);
 		}
 		input.unget();
-		tmp.type = DIV;
+		tmp.literal_value = "/"; tmp.type = Scan::DIV;
 		return tmp;
 	case '-':
 		input.get(ch);
@@ -78,7 +80,7 @@ Token GetToken(std::istream &input) {
 			return GetToken(input);
 		}
 		input.unget();
-		tmp.type = MINUS;
+		tmp.literal_value = "-"; tmp.type = Scan::MINUS;
 		return tmp;
 		//数值
 	case '0':	case '1':	case '2':	case '3':
@@ -86,7 +88,7 @@ Token GetToken(std::istream &input) {
 	case '8':	case '9':	case '.':
 		input.unget();
 		input >> num_value;
-		tmp.type = CONST_ID;
+		tmp.literal_value = "C_NUM"; tmp.type = Scan::CONST_ID;
 		tmp.value = num_value;
 		return tmp;
 		//字符串值
@@ -95,15 +97,15 @@ Token GetToken(std::istream &input) {
 			literal_value = toupper(ch);//表中都是大写
 			while (input.get(ch) && isalnum(ch)) literal_value.push_back(toupper(ch));
 			input.unget();
-			for (auto t : TokenTab) {
+			for (auto t : Scan::TokenTab) {
 				if (t.literal_value == literal_value) {
 					return tmp = t;
 				}
 			}
-			throw ID_error("未定义 ID!",LineNo,literal_value.c_str());
+			throw Error::ID_error("未定义 ID!",LineNo,literal_value.c_str());
 		}
 		literal_value.push_back(toupper(ch));
-		throw ID_error("未定义 token!",LineNo,literal_value.c_str());
+		throw Error::ID_error("未定义 token!",LineNo,literal_value.c_str());
 	}
 	//return curr_tok = TokenTab[19];
 }
