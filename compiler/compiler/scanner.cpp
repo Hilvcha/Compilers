@@ -24,6 +24,10 @@ Token GetToken(std::istream &input) {
 	std::string literal_value;
 	double num_value;
 	while (input.get(ch), !input.eof()) {//skip
+		if (input.fail()) {
+			literal_value.push_back(toupper(ch));
+			throw ID_error("文件存在非法字符，读取失败！", LineNo, literal_value.c_str());
+		}
 		switch (ch) {
 		case ' ':
 		case '\n':

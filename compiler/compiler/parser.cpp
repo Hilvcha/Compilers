@@ -1,7 +1,14 @@
 #include"parser.h"
 #include<cstdarg>
 #include<vector>
+#include<windows.h>
+#define FOR_SIZE 100
 std::ifstream input;
+//绘图相关
+void DrawLoop(double start, double to, double step, ExprNode * xp, ExprNode * yp, HDC hdc);
+void DrawDot(unsigned long, unsigned long);
+//void DrawLoop(double, double, double, ExprNode*, ExprNode*,HDC);
+
 
 double Parameter = 0;//T
 double Origin_x = 0.0, Origin_y = 0.0;//平移
@@ -13,14 +20,19 @@ struct Point{
 	double y;
 	Point(double x1,double y1):x(x1),y(y1){}
 };
+std::ostream& operator<<(std::ostream &out, const Point &t) {
+	out << t.x << ' ' << t.y << ' ' ;
+	return out;
+}
 
+std::vector<Point> *ForPtr[FOR_SIZE];
 //递归子程序
-void Program();
-void Statement();
+void Program(HDC);
+void Statement(HDC);
 void OriginStatement();
 void RotStatement();
 void ScaleStatement();
-void ForStatement();
+void ForStatement(HDC);
 
 ExprNode * MakeExprNode(Token_Type opcode, ...);
 ExprNode * Expression();
@@ -79,20 +91,35 @@ void TokenMatch(Token_Type op) {
 
 void Parser(std::string filepath) {
 	input.open(filepath);
+	if (input.fail()) {
+		throw ID_error("未打开文件",0,"!");
+	}
 	FetchToken();
-	Program();
+
+	HWND   hwnd;
+	HDC    hdc;
+
+	//获取console的设备上下文句柄
+	hwnd = GetConsoleWindow();
+	hdc = GetDC(hwnd);
+
+	//调整一下console背景颜色，否则看不清线条
+	system("color FD");
+	MoveToEx(hdc, 0, 0, NULL);
+
+	Program(hdc);
 	input.close();
 }
 
-void Program() {
+void Program(HDC hdc) {
 	std::cout << "Program" << std::endl;
 	while (token.type != NONTOKEN) {
-		Statement();
+		Statement(hdc);
 		TokenMatch(SEMICO);
 	}
 	std::cout << "out Program" << std::endl;
 }
-void Statement() {
+void Statement(HDC hdc) {
 	std::cout << "Statement" << std::endl;
 	if (token.type == ORIGIN) {
 		std::cout << "ORIGIN ";
@@ -109,7 +136,7 @@ void Statement() {
 	}
 	else if (token.type == FOR) {
 		FetchToken();
-		ForStatement();
+		ForStatement(hdc);
 	}
 	else {
 		throw Syntax_error("未能识别的 Statement!", LineNo, token);
@@ -161,7 +188,8 @@ void ScaleStatement() {
 	Scale_x = GetExprValue(xPtr);
 	Scale_y = GetExprValue(yPtr);
 }
-void ForStatement() {
+void ForStatement(HDC hdc) {
+	ForPtr[ForCnt] = new std::vector<Point>;
 	std::cout << "ForStatement" << std::endl;
 	ExprNode *fromPtr, *toPtr, *stepPtr, *xPtr, *yPtr;
 	TokenMatch(T);
@@ -173,7 +201,8 @@ void ForStatement() {
 	TokenMatch(COMMA);		yPtr=Expression();
 	TokenMatch(R_BRACKET);
 	std::cout << "out ForStatement" << std::endl;
-	DrawLoop(GetExprValue(fromPtr), GetExprValue(toPtr), GetExprValue(stepPtr), xPtr, yPtr);
+	DrawLoop(GetExprValue(fromPtr), GetExprValue(toPtr), GetExprValue(stepPtr), xPtr, yPtr,hdc);
+	ForCnt++;
 }
 
 ExprNode *MakeExprNode (Token_Type opcode, ...){
@@ -380,13 +409,43 @@ void CalcCoord(ExprNode *xp, ExprNode *yp, double &x_v, double &y_v){
 }
 
 void DrawDot(unsigned long x, unsigned long y){
-	std::cout << "x=" << x << "y=" << y <<std::endl;
+	ForPtr[ForCnt]->push_back(Point(x, y));
 }
 
-void DrawLoop(double start, double to, double step, ExprNode * xp, ExprNode *yp){
+void DrawLoop(double start, double to, double step, ExprNode * xp, ExprNode *yp, HDC hdc){
+
 	double x, y;
 	for (Parameter = start; Parameter <= to; Parameter += step) {
 		CalcCoord(xp, yp, x, y);//算出循环的每一个x y的变幻后的值
+		/*if (Parameter == start) {
+			MoveToEx(hdc, int(x), int(y), NULL);
+		}*/
 		DrawDot((unsigned long)x,(unsigned long)y);
+	//	SetPixel(hdc, int(x)+1000, int(y), 7);
 	}
+}
+
+void DrawHtml(std::string filepath) {
+
+	if (ForCnt == 0) {
+		std::cerr << "没有for语句进行绘制！\n";
+		return;
+	}
+	std::ofstream HtmlOut(filepath);
+	Point temp(0, 0);
+	HtmlOut << "<svg width='800px' height='618px' style=\"border:10px solid rgb(17, 17, 219)\">" << std::endl;
+	for (size_t i = 0; i < ForCnt; i++) {
+		HtmlOut << "	<polyline points=\"";
+		for (auto it = ForPtr[i]->begin(); it != ForPtr[i]->end(); it++) {
+			HtmlOut << it->x << ',' << it->y << ' ';
+			/*else if (it == ForPtr[i]->end() - 1) {
+				HtmlOut << 'Z';
+			}*/
+		}
+		HtmlOut << "\"style = \"fill:none;stroke:black;stroke-width:2\" />\n";
+	}
+	for (size_t i = 0; i < ForCnt; i++) {
+		delete ForPtr[i];
+	}
+	HtmlOut << "</svg>";
 }

@@ -30,5 +30,5 @@ void DrawExprTree(const ExprNode*, const unsigned int);
 //求表达式的值和绘图相关
 double GetExprValue(ExprNode* );
 static void CalcCoord(ExprNode*,ExprNode*,double &,double &);
-void DrawDot(unsigned long, unsigned long);
-void DrawLoop(double, double, double, ExprNode*, ExprNode*);
+//extern HDC hdc;
+void DrawHtml(std::string);

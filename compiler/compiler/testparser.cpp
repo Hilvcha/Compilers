@@ -1,9 +1,14 @@
 #include"parser.h"
 
 int main() {
-	std::cout << "please input your file path:" << std::endl;
-	std::string filepath="e:\\in.txt";
+	
+	std::string file;
+	std::string filepath;
+	std::cout << "输入您要分析的代码文件地址:" << std::endl;
 	std::cin >> filepath;
+	std::cout << "输入你要输出的html文件地址:" << std::endl;
+	//std::cin >> file;
+	file = "e:\\out.html";
 	try	{
 		Parser(filepath);
 
@@ -14,6 +19,8 @@ int main() {
 	catch (const ID_error& t) {
 		std::cout << "ID error:" << t.p << ' ' << t.name << std::endl<<"读取行数：" << t.Line << std::endl;
 	}
+	DrawHtml(file);
+	//test("abc");
 	system("pause");
  	return 0;
 }

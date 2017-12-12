@@ -125,6 +125,16 @@
     <ClInclude Include="parser.h" />
     <ClInclude Include="scanner.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\..\实验\parsertest\test.txt" />
+    <Text Include="..\..\..\实验\parsertest\test0.txt" />
+    <Text Include="..\..\..\实验\parsertest\test1.txt" />
+    <Text Include="..\..\..\实验\parsertest\test2.txt" />
+    <Text Include="..\..\..\实验\parsertest\test3.txt" />
+    <Text Include="..\..\..\实验\parsertest\test4.txt" />
+    <Text Include="..\..\..\实验\parsertest\test5.txt" />
+    <Text Include="..\..\..\实验\parsertest\testerror.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
